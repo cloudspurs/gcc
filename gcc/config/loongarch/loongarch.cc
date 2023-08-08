@@ -2266,7 +2266,8 @@ loongarch_valid_index_p (struct loongarch_address_info *info, rtx x,
       && contains_reg_of_mode[GENERAL_REGS][GET_MODE (SUBREG_REG (index))])
     index = SUBREG_REG (index);
 
-  if (loongarch_valid_base_register_p (index, mode, strict_p))
+  /* LA32 does not provide LDX/STX.  */
+  if (TARGET_64BIT && loongarch_valid_base_register_p (index, mode, strict_p))
     {
       info->type = ADDRESS_REG_REG;
       info->offset = index;
@@ -4673,6 +4674,7 @@ loongarch_output_move_index (rtx x, machine_mode mode, bool ldr)
       }
     };
 
+  gcc_assert (TARGET_64BIT);
   return insn[ldr][index];
 }
 

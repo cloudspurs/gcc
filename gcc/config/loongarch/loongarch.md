@@ -734,30 +734,33 @@
   [(set (match_operand:SI 0 "register_operand" "=r,r,r,r,r")
 	(plus:SI (match_operand:SI 1 "register_operand" "r,r,r,r,r")
 		 (match_operand:SI 2 "plus_si_operand"  "r,I,La,Le,Lb")))]
-  "TARGET_64BIT"
+  ""
 {
-  if (CONST_INT_P (operands[2]) && !IMM12_INT (operands[2])
-      && ADDU16I_OPERAND (INTVAL (operands[2])))
+  if (TARGET_64BIT)
     {
-      rtx t1 = gen_reg_rtx (DImode);
-      rtx t2 = gen_reg_rtx (DImode);
-      rtx t3 = gen_reg_rtx (DImode);
-      emit_insn (gen_extend_insn (t1, operands[1], DImode, SImode, 0));
-      t2 = operands[2];
-      emit_insn (gen_adddi3 (t3, t1, t2));
-      t3 = gen_lowpart (SImode, t3);
-      emit_move_insn (operands[0], t3);
-      DONE;
-    }
-  else
-    {
-      rtx t = gen_reg_rtx (DImode);
-      emit_insn (gen_addsi3_extended (t, operands[1], operands[2]));
-      t = gen_lowpart (SImode, t);
-      SUBREG_PROMOTED_VAR_P (t) = 1;
-      SUBREG_PROMOTED_SET (t, SRP_SIGNED);
-      emit_move_insn (operands[0], t);
-      DONE;
+      if (CONST_INT_P (operands[2]) && !IMM12_INT (operands[2])
+	  && ADDU16I_OPERAND (INTVAL (operands[2])))
+	{
+	  rtx t1 = gen_reg_rtx (DImode);
+	  rtx t2 = gen_reg_rtx (DImode);
+	  rtx t3 = gen_reg_rtx (DImode);
+	  emit_insn (gen_extend_insn (t1, operands[1], DImode, SImode, 0));
+	  t2 = operands[2];
+	  emit_insn (gen_adddi3 (t3, t1, t2));
+	  t3 = gen_lowpart (SImode, t3);
+	  emit_move_insn (operands[0], t3);
+	  DONE;
+	}
+      else
+	{
+	  rtx t = gen_reg_rtx (DImode);
+	  emit_insn (gen_addsi3_extended (t, operands[1], operands[2]));
+	  t = gen_lowpart (SImode, t);
+	  SUBREG_PROMOTED_VAR_P (t) = 1;
+	  SUBREG_PROMOTED_SET (t, SRP_SIGNED);
+	  emit_move_insn (operands[0], t);
+	  DONE;
+	}
     }
 })
 

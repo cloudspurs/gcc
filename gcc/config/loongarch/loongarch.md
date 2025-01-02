@@ -2210,6 +2210,19 @@
   [(set_attr "move_type" "move,const,load,store,mgtf,fpload,mftg,fpstore")
    (set_attr "mode" "DI")])
 
+;; Split 64-bit move in LoongArch32
+
+(define_split
+  [(set (match_operand:MOVE64 0 "nonimmediate_operand")
+	(match_operand:MOVE64 1 "move_operand"))]
+  "TARGET_32BIT && reload_completed
+   && loongarch_split_move_p (operands[0], operands[1])"
+  [(const_int 0)]
+{
+  loongarch_split_move (operands[0], operands[1]);
+  DONE;
+})
+
 (define_insn_and_split "*movdi_64bit"
   [(set (match_operand:DI 0 "nonimmediate_operand" "=r,r,r,w,*f,*f,*r,*m")
 	(match_operand:DI 1 "move_operand" "r,Yd,w,rJ,*r*J,*m,*f,*f"))]

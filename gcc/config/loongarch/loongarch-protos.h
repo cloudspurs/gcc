@@ -88,6 +88,7 @@ extern void loongarch_split_plus_constant (rtx *, machine_mode);
 extern rtx loongarch_reassoc_shift_bitwise (bool is_and, rtx shamt,
 					    rtx mask, machine_mode mode);
 extern void loongarch_split_vector_move (rtx, rtx);
+extern void loongarch_split_doubleword_move (rtx, rtx);
 extern const char *loongarch_output_move (rtx *);
 #ifdef RTX_CODE
 extern void loongarch_expand_scc (rtx *);

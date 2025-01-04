@@ -2195,7 +2195,7 @@ static bool
 loongarch_valid_lo_sum_p (enum loongarch_symbol_type symbol_type,
 			  machine_mode mode, rtx x)
 {
-  int align, size;
+  int align, size, word_size;
 
   /* Check that symbols of type SYMBOL_TYPE can be used to access values
      of mode MODE.  */
@@ -2236,7 +2236,11 @@ loongarch_valid_lo_sum_p (enum loongarch_symbol_type symbol_type,
 
   /* We may need to split multiword moves, so make sure that each word
      can be accessed without inducing a carry.  */
-  if (size > BITS_PER_WORD
+  /* word_size is different when GRLEN != FRLEN.  */
+  word_size = (GET_MODE_CLASS (mode) == MODE_FLOAT
+	       ? (UNITS_PER_HWFPVALUE * BITS_PER_UNIT)
+	       : BITS_PER_WORD);
+  if (size > word_size
       && (!TARGET_STRICT_ALIGN || size > align))
     return false;
 

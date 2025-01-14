@@ -137,6 +137,9 @@ EnumValue
 Enum(tune_type) String(@@STR_TUNE_GENERIC@@) Value(TUNE_GENERIC)
 
 EnumValue
+Enum(tune_type) String(@@STR_CPU_LOONGARCH32@@) Value(TUNE_LOONGARCH32)
+
+EnumValue
 Enum(tune_type) String(@@STR_CPU_LOONGARCH64@@) Value(TUNE_LOONGARCH64)
 
 EnumValue

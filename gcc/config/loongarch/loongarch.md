@@ -413,6 +413,12 @@
 (define_mode_iterator ANYFI [(SI "TARGET_HARD_FLOAT")
 			     (DI "TARGET_DOUBLE_FLOAT")])
 
+;; A mode for which moves involving FPRs may need to be split.
+(define_mode_iterator SPLITF
+  [(DF "!TARGET_64BIT && TARGET_DOUBLE_FLOAT")
+   (DI "!TARGET_64BIT && TARGET_DOUBLE_FLOAT")
+   (TF "TARGET_64BIT && TARGET_DOUBLE_FLOAT")])
+
 ;; A mode for anything with 32 bits or more, and able to be loaded with
 ;; the same addressing mode as ld.w.
 (define_mode_iterator LD_AT_LEAST_32_BIT [GPR ANYF])
@@ -2222,19 +2228,6 @@
   [(set_attr "move_type" "move,const,load,store,mgtf,fpload,mftg,fpstore")
    (set_attr "mode" "DI")])
 
-;; Split 64-bit move in LoongArch32
-
-(define_split
-  [(set (match_operand:MOVE64 0 "nonimmediate_operand")
-	(match_operand:MOVE64 1 "move_operand"))]
-  "reload_completed && TARGET_32BIT
-   && loongarch_split_move_p (operands[0], operands[1])"
-  [(const_int 0)]
-{
-  loongarch_split_move (operands[0], operands[1]);
-  DONE;
-})
-
 (define_insn_and_split "*movdi_64bit"
   [(set (match_operand:DI 0 "nonimmediate_operand" "=r,r,r,w,*f,*f,*r,*m")
 	(match_operand:DI 1 "move_operand" "r,Yd,w,rJ,*r*J,*m,*f,*f"))]
@@ -2464,6 +2457,54 @@
   { return loongarch_output_move (operands); }
   [(set_attr "move_type" "move,load,store")
    (set_attr "mode" "DF")])
+
+;; Split 64-bit move in LoongArch32
+
+(define_split
+  [(set (match_operand:MOVE64 0 "nonimmediate_operand")
+	(match_operand:MOVE64 1 "move_operand"))]
+  "reload_completed && TARGET_32BIT
+   && loongarch_split_move_p (operands[0], operands[1])"
+  [(const_int 0)]
+{
+  loongarch_split_move (operands[0], operands[1]);
+  DONE;
+})
+
+;; Emit a doubleword move in which exactly one of the operands is
+;; a floating-point register.  We can't just emit two normal moves
+;; because of the constraints imposed by the FPU register model;
+;; see loongarch_can_change_mode_class for details.  Instead, we keep
+;; the FPR whole and use special patterns to refer to each word of
+;; the other operand.
+
+(define_expand "move_doubleword_fpr<mode>"
+  [(set (match_operand:SPLITF 0)
+	(match_operand:SPLITF 1))]
+  ""
+{
+  if (FP_REG_RTX_P (operands[0]))
+    {
+      rtx low = loongarch_subword (operands[1], 0);
+      rtx high = loongarch_subword (operands[1], 1);
+      emit_insn (gen_load_low<mode> (operands[0], low));
+      if (!TARGET_64BIT)
+       emit_insn (gen_movgr2frh<mode> (operands[0], high, operands[0]));
+      else
+       emit_insn (gen_load_high<mode> (operands[0], high, operands[0]));
+    }
+  else
+    {
+      rtx low = loongarch_subword (operands[0], 0);
+      rtx high = loongarch_subword (operands[0], 1);
+      emit_insn (gen_store_word<mode> (low, operands[1], const0_rtx));
+      if (!TARGET_64BIT)
+       emit_insn (gen_movfrh2gr<mode> (high, operands[1]));
+      else
+       emit_insn (gen_store_word<mode> (high, operands[1], const1_rtx));
+    }
+  DONE;
+})
 
 ;; Clear one FCC register
 
@@ -2756,6 +2797,71 @@
   "ftint<lrint_submenmonic>.<ANYFI:ifmt>.<ANYF:fmt> %0,%1"
   [(set_attr "type" "fcvt")
    (set_attr "mode" "<ANYF:MODE>")])
+
+;; Load the low word of operand 0 with operand 1.
+(define_insn "load_low<mode>"
+  [(set (match_operand:SPLITF 0 "register_operand" "=f,f")
+	(unspec:SPLITF [(match_operand:<HALFMODE> 1 "general_operand" "rJ,m")]
+		       UNSPEC_LOAD_LOW))]
+  "TARGET_HARD_FLOAT"
+{
+  operands[0] = loongarch_subword (operands[0], 0);
+  return loongarch_output_move (operands);
+}
+  [(set_attr "move_type" "mgtf,fpload")
+   (set_attr "mode" "<HALFMODE>")])
+
+;; Load the high word of operand 0 from operand 1, preserving the value
+;; in the low word.
+(define_insn "load_high<mode>"
+  [(set (match_operand:SPLITF 0 "register_operand" "=f,f")
+	(unspec:SPLITF [(match_operand:<HALFMODE> 1 "general_operand" "rJ,m")
+			(match_operand:SPLITF 2 "register_operand" "0,0")]
+		       UNSPEC_LOAD_HIGH))]
+  "TARGET_HARD_FLOAT"
+{
+  operands[0] = loongarch_subword (operands[0], 1);
+  return loongarch_output_move (operands);
+}
+  [(set_attr "move_type" "mgtf,fpload")
+   (set_attr "mode" "<HALFMODE>")])
+
+;; Store one word of operand 1 in operand 0.  Operand 2 is 1 to store the
+;; high word and 0 to store the low word.
+(define_insn "store_word<mode>"
+  [(set (match_operand:<HALFMODE> 0 "nonimmediate_operand" "=r,m")
+	(unspec:<HALFMODE> [(match_operand:SPLITF 1 "register_operand" "f,f")
+			    (match_operand 2 "const_int_operand")]
+			   UNSPEC_STORE_WORD))]
+  "TARGET_HARD_FLOAT"
+{
+  operands[1] = loongarch_subword (operands[1], INTVAL (operands[2]));
+  return loongarch_output_move (operands);
+}
+  [(set_attr "move_type" "mftg,fpstore")
+   (set_attr "mode" "<HALFMODE>")])
+
+;; Move operand 1 to the high word of operand 0 using movgr2frh.w, preserving the
+;; value in the low word.
+(define_insn "movgr2frh<mode>"
+  [(set (match_operand:SPLITF 0 "register_operand" "=f")
+	(unspec:SPLITF [(match_operand:<HALFMODE> 1 "reg_or_0_operand" "rJ")
+			(match_operand:SPLITF 2 "register_operand" "0")]
+			UNSPEC_MOVGR2FRH))]
+  "TARGET_DOUBLE_FLOAT"
+  "movgr2frh.w\t%0,%z1"
+  [(set_attr "move_type" "mgtf")
+   (set_attr "mode" "<HALFMODE>")])
+
+;; Move high word of operand 1 to operand 0 using movfrh2gr.s.
+(define_insn "movfrh2gr<mode>"
+  [(set (match_operand:<HALFMODE> 0 "register_operand" "=r")
+	(unspec:<HALFMODE> [(match_operand:SPLITF 1 "register_operand" "f")]
+			    UNSPEC_MOVFRH2GR))]
+  "TARGET_DOUBLE_FLOAT"
+  "movfrh2gr.s\t%0,%1"
+  [(set_attr "move_type" "mftg")
+   (set_attr "mode" "<HALFMODE>")])
 
 ;; Thread-Local Storage
 

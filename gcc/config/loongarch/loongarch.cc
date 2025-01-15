@@ -4461,14 +4461,41 @@ loongarch_split_move_p (rtx dest, rtx src)
 void
 loongarch_split_move (rtx dest, rtx src)
 {
+  rtx low_dest;
+
   gcc_checking_assert (loongarch_split_move_p (dest, src));
   if (LSX_SUPPORTED_MODE_P (GET_MODE (dest))
       || LASX_SUPPORTED_MODE_P (GET_MODE (dest)))
     loongarch_split_vector_move (dest, src);
-  else if (GET_MODE (dest) == E_DImode && TARGET_32BIT)
-    loongarch_split_doubleword_move (dest, src);
+  else if (FP_REG_RTX_P (dest) || FP_REG_RTX_P (src))
+    {
+      if (!TARGET_64BIT && GET_MODE (dest) == DImode)
+	emit_insn (gen_move_doubleword_fprdi (dest, src));
+      else if (!TARGET_64BIT && GET_MODE (dest) == DFmode)
+	emit_insn (gen_move_doubleword_fprdf (dest, src));
+      else if (TARGET_64BIT && GET_MODE (dest) == TFmode)
+	emit_insn (gen_move_doubleword_fprtf (dest, src));
+      else
+	gcc_unreachable ();
+    }
   else
-    gcc_unreachable ();
+    {
+      /* The operation can be split into two normal moves.  Decide in
+	 which order to do them.  */
+      low_dest = loongarch_subword (dest, false);
+      if (REG_P (low_dest) && reg_overlap_mentioned_p (low_dest, src))
+	{
+	  loongarch_emit_move (loongarch_subword (dest, true),
+			       loongarch_subword (src, true));
+	  loongarch_emit_move (low_dest, loongarch_subword (src, false));
+	}
+      else
+	{
+	  loongarch_emit_move (low_dest, loongarch_subword (src, false));
+	  loongarch_emit_move (loongarch_subword (dest, true),
+			       loongarch_subword (src, true));
+	}
+    }
 }
 
 /* Check if adding an integer constant value for a specific mode can be

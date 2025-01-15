@@ -4557,7 +4557,8 @@
 	(match_operand:LD_AT_LEAST_32_BIT 1 "mem_simple_ldst_operand" ""))]
   "loongarch_pre_reload_split ()
    && la_opt_explicit_relocs == EXPLICIT_RELOCS_AUTO
-   && (TARGET_CMODEL_NORMAL || TARGET_CMODEL_MEDIUM)"
+   && (TARGET_CMODEL_NORMAL || TARGET_CMODEL_MEDIUM)
+   && TARGET_64BIT"
   "#"
   "&& true"
   {

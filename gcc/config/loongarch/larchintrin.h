@@ -94,6 +94,9 @@ __rdtimel_w (void)
 /* Data types in instruction templates:  VOID, USI, UDI, SI.  */
 #define __cacop_d(/*ui5*/ _1, /*unsigned long int*/ _2, /*si12*/ _3) \
   __builtin_loongarch_cacop_d ((_1), (_2), (_3))
+#elif defined __loongarch32
+#define __cacop_w(/*ui5*/ _1, /*unsigned long int*/ _2, /*si12*/ _3) \
+  __builtin_loongarch_cacop_w ((_1), (_2), (_3))
 #else
 #error "Unsupported ABI."
 #endif
@@ -132,6 +135,9 @@ __asrtgt_d (long int _1, long int _2)
 /* Data types in instruction templates:  DI, DI, UQI.  */
 #define __lddir_d(/*long int*/ _1, /*ui5*/ _2) \
   __builtin_loongarch_lddir_d ((_1), (_2))
+#elif defined __loongarch32
+#define __lddir_w(/*long int*/ _1, /*ui5*/ _2) \
+  __builtin_loongarch_lddir_w ((_1), (_2))
 #else
 #error "Unsupported ABI."
 #endif
@@ -141,6 +147,9 @@ __asrtgt_d (long int _1, long int _2)
 /* Data types in instruction templates:  VOID, DI, UQI.  */
 #define __ldpte_d(/*long int*/ _1, /*ui5*/ _2) \
   __builtin_loongarch_ldpte_d ((_1), (_2))
+#elif defined __loongarch32
+#define __ldpte_w(/*long int*/ _1, /*ui5*/ _2) \
+  __builtin_loongarch_ldpte_w ((_1), (_2))
 #else
 #error "Unsupported ABI."
 #endif

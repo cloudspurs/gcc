@@ -6568,7 +6568,10 @@ loongarch_print_operand (FILE *file, rtx op, int letter)
 	case REG:
 	  {
 	    unsigned int regno = REGNO (op);
-	    if (letter && letter != 'z')
+	    if ((letter == 'M')
+		|| letter == 'D')
+	      regno++;
+	    else if (letter && letter != 'z' && letter != 'M' && letter != 'L')
 	      output_operand_lossage ("invalid use of '%%%c'", letter);
 	    fprintf (file, "%s", reg_names[regno]);
 	  }

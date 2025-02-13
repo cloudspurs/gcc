@@ -173,7 +173,8 @@ along with GCC; see the file COPYING3.  If not see
 
 /* long double is not a fixed mode, but the idea is that, if we
    support long double, we also want a 128-bit integer type.  */
-#define MAX_FIXED_MODE_SIZE LA_LONG_DOUBLE_TYPE_SIZE
+//#define MAX_FIXED_MODE_SIZE LA_LONG_DOUBLE_TYPE_SIZE
+#define MAX_FIXED_MODE_SIZE GET_MODE_BITSIZE (TARGET_64BIT ? TImode : DImode)
 
 /* Width in bits of a pointer.  */
 #ifndef POINTER_SIZE

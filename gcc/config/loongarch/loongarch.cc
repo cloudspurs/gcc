@@ -4947,10 +4947,15 @@ loongarch_output_move (rtx *operands)
 	      /* Matching address type with a 12bit offset and
 		 ADDRESS_LO_SUM.  */
 	      if (const_arith_operand (offset, Pmode)
-		  || GET_CODE (offset) == LO_SUM)
+		  || GET_CODE (offset) == LO_SUM
+		  || GET_CODE(XEXP (dest, 0)) == REG
+		  || offset == const0_rtx)
 		return "st.w\t%z1,%0";
 	      else
-		return "stptr.w\t%z1,%0";
+		{
+		  gcc_assert (TARGET_64BIT);
+		  return "stptr.w\t%z1,%0";
+		}
 	    case 8:
 	      if (const_arith_operand (offset, Pmode)
 		  || GET_CODE (offset) == LO_SUM)
@@ -4992,10 +4997,15 @@ loongarch_output_move (rtx *operands)
 	      /* Matching address type with a 12bit offset and
 		 ADDRESS_LO_SUM.  */
 	      if (const_arith_operand (offset, Pmode)
-		  || GET_CODE (offset) == LO_SUM)
+		  || GET_CODE (offset) == LO_SUM
+		  || GET_CODE(XEXP (src, 0)) == REG
+		  || offset == const0_rtx)
 		return "ld.w\t%0,%1";
 	      else
-		return "ldptr.w\t%0,%1";
+		{
+		  gcc_assert (TARGET_64BIT);
+		  return "ldptr.w\t%0,%1";
+		}
 	    case 8:
 	      if (const_arith_operand (offset, Pmode)
 		  || GET_CODE (offset) == LO_SUM)

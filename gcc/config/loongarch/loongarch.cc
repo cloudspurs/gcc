@@ -2149,7 +2149,8 @@ loongarch_valid_offset_p (rtx x, machine_mode mode)
      or check that X is a signed 16-bit number
      and offset 4 byte aligned.  */
   if (!(const_arith_operand (x, Pmode)
-	|| ((mode == E_SImode || mode == E_DImode)
+	|| (TARGET_64BIT
+	    && (mode == E_SImode || mode == E_DImode)
 	    && const_imm16_operand (x, Pmode)
 	    && (loongarch_signed_immediate_p (INTVAL (x), 14, 2)))))
     return false;
@@ -8316,7 +8317,8 @@ loongarch_get_separate_components (void)
 
 	   TODO: This may need a revise when we add LA32 as ldptr.w is not
 	   guaranteed available by the manual.  */
-	if (offset < 32768)
+	if (IMM12_OPERAND (offset)
+	    || (TARGET_64BIT && (offset < 32768)))
 	  bitmap_set_bit (components, regno);
 
 	offset -= UNITS_PER_WORD;

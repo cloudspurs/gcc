@@ -38,6 +38,10 @@
 (define_code_attr atomic_optab
   [(plus "add") (ior "or") (xor "xor") (and "and")])
 
+;; For 32 bit.
+(define_code_attr atomic_optab_insn
+  [(plus "add.w") (ior "or") (xor "xor") (and "and")])
+
 ;; This attribute gives the format suffix for atomic memory operations.
 (define_mode_attr amo [(QI "b") (HI "h") (SI "w") (DI "d")])
 
@@ -181,10 +185,22 @@
 	  [(any_atomic:GPR (match_dup 0)
 			   (match_operand:GPR 1 "reg_or_0_operand" "rJ"))
 	   (match_operand:SI 2 "const_int_operand")] ;; model
-	 UNSPEC_SYNC_OLD_OP))]
+	 UNSPEC_SYNC_OLD_OP))
+   (clobber (match_scratch:SI 3 "=&r"))
+  ]
   ""
-  "am<amop>%A2.<amo>\t$zero,%z1,%0"
-  [(set (attr "length") (const_int 4))])
+{
+  if (TARGET_64BIT)
+    return "am<amop>%A2.<amo>\t$zero,%z1,%0";
+  else
+    return "%G2\n\t"
+	   "1:\n\t"
+	   "ll.w\t%3,%0\n\t"
+	   "<atomic_optab_insn>\t%3,%z1,%3\n\t"
+	   "sc.w\t%3,%0\n\t"
+	   "beq\t$zero,%3,1b\n\t"
+	   "2:";
+})
 
 (define_insn "atomic_add<mode>"
   [(set (match_operand:SHORT 0 "memory_operand" "+ZB")
@@ -197,18 +213,55 @@
   "amadd%A2.<amo>\t$zero,%z1,%0"
   [(set (attr "length") (const_int 4))])
 
-(define_insn "atomic_fetch_<atomic_optab><mode>"
-  [(set (match_operand:GPR 0 "register_operand" "=&r")
-	(match_operand:GPR 1 "memory_operand" "+ZB"))
+(define_insn "atomic_fetch_<atomic_optab>di"
+  [(set (match_operand:DI 0 "register_operand" "=&r")
+	(match_operand:DI 1 "memory_operand" "+ZB"))
    (set (match_dup 1)
-	(unspec_volatile:GPR
-	  [(any_atomic:GPR (match_dup 1)
-			   (match_operand:GPR 2 "reg_or_0_operand" "rJ"))
+	(unspec_volatile:DI
+	  [(any_atomic:DI (match_dup 1)
+			   (match_operand:DI 2 "reg_or_0_operand" "rJ"))
 	   (match_operand:SI 3 "const_int_operand")] ;; model
 	 UNSPEC_SYNC_OLD_OP))]
-  ""
-  "am<amop>%A3.<amo>\t%0,%z2,%1"
+  "TARGET_64BIT"
+  "am<amop>%A3.d\t%0,%z2,%1"
   [(set (attr "length") (const_int 4))])
+
+;; Atomic fetch-op-store loop for 32 bit.
+;; ================================================================================
+;;      %G3                (dbar or not)
+;;   1:
+;;      ll.w                   %0,%1           (%0: dest reg, %1: memory addr)
+;;      <atomic_optab_insn>    %4,%0,%2        (%4: scratch reg)
+;;      sc.w                   %4,%1           (write llbit to %4)
+;;      beq                    $zero,%4,1b     (if sc failed, try again)
+;;   2:
+;; =================================================================================
+
+(define_insn "atomic_fetch_<atomic_optab>si"
+  [(set (match_operand:SI 0 "register_operand" "=&r")
+	(match_operand:SI 1 "memory_operand" "+ZB"))
+   (set (match_dup 1)
+	(unspec_volatile:SI
+	  [(any_atomic:SI (match_dup 1)
+		     (match_operand:SI 2 "reg_or_0_operand" "rJ"))
+	   (match_operand:SI 3 "const_int_operand")] ;; model
+	 UNSPEC_SYNC_OLD_OP))
+   (clobber (match_scratch:SI 4 "=&r"))
+  ]
+  ""
+{
+  if (TARGET_64BIT)
+    return "am<amop>%A3.w\t%0,%z2,%1";
+  else
+    return "%G3\n\t"
+	    "1:\n\t"
+	    "ll.w\t%0,%1\n\t"
+	    "<atomic_optab_insn>\t%4,%z2,%0\n\t"
+	    "sc.w\t%4,%1\n\t"
+	    "beq\t$zero,%4,1b\n\t"
+	    "2:";
+}
+  [(set (attr "length") (const_int 20))])
 
 (define_insn "atomic_exchange<mode>"
   [(set (match_operand:GPR 0 "register_operand" "=&r")
@@ -217,10 +270,22 @@
 	   (match_operand:SI 3 "const_int_operand")] ;; model
 	  UNSPEC_SYNC_EXCHANGE))
    (set (match_dup 1)
-	(match_operand:GPR 2 "register_operand" "r"))]
+	(match_operand:GPR 2 "register_operand" "r"))
+   (clobber (match_scratch:SI 4 "=&r"))
+  ]
   ""
-  "amswap%A3.<amo>\t%0,%z2,%1"
-  [(set (attr "length") (const_int 4))])
+{
+  if (TARGET_64BIT)
+    return "amswap%A3.<amo>\t%0,%z2,%1";
+  else
+    return "%G3\n\t"
+	   "1:\n\t"
+	   "ll.w\t%0,%1\n\t"
+	   "or\t%4,$zero,%2\n\t"
+	   "sc.w\t%4,%1\n\t"
+	   "beq\t$zero,%4,1b\n\t"
+	   "2:";
+})
 
 (define_insn "atomic_exchange<mode>_short"
   [(set (match_operand:SHORT 0 "register_operand" "=&r")

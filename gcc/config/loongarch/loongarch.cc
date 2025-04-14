@@ -2480,7 +2480,8 @@ loongarch_12bit_offset_address_p (rtx x, machine_mode mode)
 	  && ((addr.type == ADDRESS_REG
 	       && CONST_INT_P (addr.offset)
 	       && LARCH_12BIT_OFFSET_P (INTVAL (addr.offset)))
-	      || addr.type == ADDRESS_LO_SUM));
+	      || addr.type == ADDRESS_LO_SUM
+	      || addr.type == ADDRESS_CONST_INT));
 }
 
 /* Return true if X is a legitimate address with a 14-bit offset shifted 2.

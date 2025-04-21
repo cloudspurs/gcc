@@ -1049,8 +1049,9 @@ loongarch_for_each_saved_reg (HOST_WIDE_INT sp_offset,
   for (int regno = FP_REG_FIRST; regno <= FP_REG_LAST; regno++)
     if (BITSET_P (cfun->machine->frame.fmask, regno - FP_REG_FIRST))
       {
+	machine_mode mode = TARGET_DOUBLE_FLOAT ? DFmode : SFmode;
 	if (!cfun->machine->reg_is_wrapped_separately[regno])
-	  loongarch_save_restore_reg (word_mode, regno, offset, fn);
+	  loongarch_save_restore_reg (mode, regno, offset, fn);
 
 	offset -= GET_MODE_SIZE (mode);
       }

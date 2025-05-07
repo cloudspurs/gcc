@@ -662,7 +662,7 @@ enum reg_class
    `crtl->outgoing_args_size'.  */
 #define OUTGOING_REG_PARM_STACK_SPACE(FNTYPE) 1
 
-#define STACK_BOUNDARY (TARGET_ABI_LP64 ? 128 : 64)
+#define STACK_BOUNDARY 128
 
 /* This value controls how many pages we manually unroll the loop for when
    generating stack clash probes.  */
@@ -749,8 +749,7 @@ typedef struct {
 
 /* Treat LOC as a byte offset from the stack pointer and round it up
    to the next fully-aligned offset.  */
-#define LARCH_STACK_ALIGN(LOC) \
-  (TARGET_ABI_LP64 ? ROUND_UP ((LOC), 16) : ROUND_UP ((LOC), 8))
+#define LARCH_STACK_ALIGN(LOC) ROUND_UP ((LOC), 16)
 
 #define MCOUNT_NAME "_mcount"
 
@@ -780,9 +779,8 @@ typedef struct {
 
 #define TRAMPOLINE_CODE_SIZE 16
 #define TRAMPOLINE_SIZE \
-  ((Pmode == SImode) ? TRAMPOLINE_CODE_SIZE \
-		     : (TRAMPOLINE_CODE_SIZE + POINTER_SIZE * 2))
-#define TRAMPOLINE_ALIGNMENT POINTER_SIZE
+	  (TRAMPOLINE_CODE_SIZE + GET_MODE_SIZE (ptr_mode) * 2)
+#define TRAMPOLINE_ALIGNMENT (POINTER_SIZE/8)
 
 /* loongarch_trampoline_init calls this library function to flush
    program and data caches.  */

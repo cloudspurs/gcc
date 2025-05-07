@@ -701,6 +701,7 @@ default_tune_for_arch (int arch, int fallback)
       break;
 
     TUNE_FOR_ARCH(NATIVE)
+    TUNE_FOR_ARCH(LOONGARCH32)
     TUNE_FOR_ARCH(LOONGARCH64)
     TUNE_FOR_ARCH(LA464)
     TUNE_FOR_ARCH(LA664)

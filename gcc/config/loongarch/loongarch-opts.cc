@@ -564,6 +564,9 @@ fallback:
   t.tls_dialect = constrained.tls_dialect ? target->tls_dialect
 	  : DEFAULT_TLS_TYPE;
 
+  /* newlib not support tls.  */
+  //t.tls_dialect = TLS_TRADITIONAL;
+
   /* Cleanup and return.  */
   obstack_free (&msg_obstack, NULL);
   *target = t;
@@ -1072,12 +1075,16 @@ loongarch_init_misc_options (struct gcc_options *opts,
 #undef INIT_TARGET_FLAG
 
   /* Set mexplicit-relocs default.  */
-  if (opts->x_la_opt_explicit_relocs == M_OPT_UNSET)
-    opts->x_la_opt_explicit_relocs = (HAVE_AS_EXPLICIT_RELOCS
-				      ? (TARGET_LINKER_RELAXATION
-					 ? EXPLICIT_RELOCS_AUTO
-					 : EXPLICIT_RELOCS_ALWAYS)
-				      : EXPLICIT_RELOCS_NONE);
+//  if (opts->x_la_opt_explicit_relocs == M_OPT_UNSET)
+//    opts->x_la_opt_explicit_relocs = (HAVE_AS_EXPLICIT_RELOCS
+//				      ? (TARGET_LINKER_RELAXATION
+//					 ? EXPLICIT_RELOCS_AUTO
+//					 : EXPLICIT_RELOCS_ALWAYS)
+//				      : EXPLICIT_RELOCS_NONE);
+//
+
+  /* Force use mno-explicit-relocs for abi 1.0 relocs.  */
+  opts->x_la_opt_explicit_relocs = EXPLICIT_RELOCS_NONE;
 
   /* Enable sw prefetching at -O3 and higher.  */
   if (opts->x_flag_prefetch_loop_arrays < 0
